@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Search</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .search-container {
+            margin-top: 20px;
+            width: 60%;
+        }
+        .search-container input[type="text"] {
+            width: calc(100% - 60px);
+            padding: 10px;
+            margin-right: 10px;
+            font-size: 50px;
+        }
+        .search-container button {
+            padding: 10px;
+            font-size: 20px;
+        }
+        .results-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 20px;
+            width: 90%;
+        }
+        .product-card {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin: 10px;
+            padding: 10px;
+            width: 300px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .product-card img {
+            width: 100%;
+            height: auto;
+            border-radius: 5px;
+        }
+        .product-card select {
+            width: 100%;
+            padding: 5px;
+            margin-top: 10px;
+        }
+        .product-description {
+            max-height: 100px;
+            overflow: auto;
+            margin-bottom: 10px;
+        }
+        .product-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            max-height: 50px;
+            overflow: auto;
+            margin-top: 10px;
+        }
+        .product-tag {
+            background-color: #f0f0f0;
+            border-radius: 15px;
+            padding: 5px 10px;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <h1> Language Agnostic Semantic Search</h1>
+    <div class="search-container">
+        <input type="text" id="searchQuery" placeholder="Search for products...">
+        <button onclick="searchProducts()">Search</button>
+    </div>
+    <div class="results-container" id="resultsContainer"></div>
+
+    <script>
+        async function searchProducts() {
+            const query = document.getElementById('searchQuery').value;
+            const response = await fetch('/search', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ query })
+            });
+            const results = await response.json();
+            displayResults(results);
+        }
+
+        function displayResults(products) {
+            const resultsContainer = document.getElementById('resultsContainer');
+            resultsContainer.innerHTML = '';
+            products.forEach(product => {
+                const productCard = document.createElement('div');
+                productCard.className = 'product-card';
+
+                const productImage = document.createElement('img');
+                productImage.src = product.product_configurations[0].product_pictures[0].product_picture_url;
+                productImage.alt = product.product_title;
+                productCard.appendChild(productImage);
+
+                const productTitle = document.createElement('h3');
+                productTitle.textContent = product.product_title;
+                productCard.appendChild(productTitle);
+
+                const searchScore = document.createElement('div');
+                searchScore.textContent = 'Score:' + product.score;
+                productCard.appendChild(searchScore);
+
+                const productDescription = document.createElement('div');
+                productDescription.className = 'product-description';
+                productDescription.textContent = product.clean_product_description;
+                productCard.appendChild(productDescription);
+
+                const productCategory = document.createElement('p');
+                productCategory.textContent = 'Category: ' + product.category_title;
+                productCard.appendChild(productCategory);
+
+                const selectConfig = document.createElement('select');
+                product.product_configurations.forEach(config => {
+                    const option = document.createElement('option');
+                    option.value = config.product_configuration_id;
+                    option.textContent = config.product_configuration_display_name + ' - $' + config.product_configuration_total_price.toFixed(2);
+                    selectConfig.appendChild(option);
+                });
+                selectConfig.onchange = (e) => updateImage(e, product.product_configurations);
+                productCard.appendChild(selectConfig);
+
+                const productTags = document.createElement('div');
+                productTags.className = 'product-tags';
+                product.product_tags.forEach(tag => {
+                    const tagElement = document.createElement('span');
+                    tagElement.className = 'product-tag';
+                    tagElement.textContent = tag;
+                    productTags.appendChild(tagElement);
+                });
+                productCard.appendChild(productTags);
+
+                resultsContainer.appendChild(productCard);
+            });
+        }
+
+        function updateImage(event, configurations) {
+            const configId = event.target.value;
+            const selectedConfig = configurations.find(config => config.product_configuration_id == configId);
+            const productCard = event.target.parentElement;
+            const productImage = productCard.querySelector('img');
+            productImage.src = selectedConfig.product_pictures[0].product_picture_url;
+        }
+    </script>
+</body>
+</html>
